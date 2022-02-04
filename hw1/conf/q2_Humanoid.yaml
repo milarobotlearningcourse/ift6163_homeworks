@@ -1,0 +1,10 @@
+defaults:
+  - q1_Humanoid
+  - _self_
+  
+alg:
+  do_dagger: True
+  n_iter: 5
+  
+  
+

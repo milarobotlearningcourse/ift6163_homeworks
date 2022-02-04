@@ -40,6 +40,16 @@ class BC_Trainer(object):
             relabel_with_expert=self.params['alg']['do_dagger'],
             expert_policy=self.loaded_expert_policy,
         )
+        
+    def evaluate_expert_policy(self):
+        self.rl_trainer.evaluate_expert_policy(
+            n_iter=self.params['alg']['n_iter'],
+            initial_expertdata=self.params['env']['expert_data'],
+            collect_policy=self.rl_trainer.agent.actor,
+            eval_policy=self.rl_trainer.agent.actor,
+            relabel_with_expert=self.params['alg']['do_dagger'],
+            expert_policy=self.loaded_expert_policy,
+        )
 
 import hydra, json
 from omegaconf import DictConfig, OmegaConf
@@ -90,6 +100,7 @@ def my_app(cfg: DictConfig):
     ###################
 
     trainer = BC_Trainer(cfg)
+    trainer.evaluate_expert_policy()
     out = trainer.run_training_loop()
 
 if __name__ == "__main__":

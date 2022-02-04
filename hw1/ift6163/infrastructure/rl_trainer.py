@@ -1,4 +1,6 @@
 from collections import OrderedDict
+# from copyreg import pickle
+import pickle
 import numpy as np
 import time
 
@@ -120,7 +122,7 @@ class RL_Trainer(object):
 
             # train agent (using sampled data from replay buffer)
             training_logs = self.train_agent()  # HW1: implement this function below
-
+            
             # log/save
             if self.log_video or self.log_metrics:
 
@@ -132,6 +134,43 @@ class RL_Trainer(object):
                 if self.params['logging']['save_params']:
                     print('\nSaving agent params')
                     self.agent.save('{}/policy_itr_{}.pt'.format(self.params['logging']['logdir'], itr))
+    
+    def evaluate_expert_policy(self, n_iter, collect_policy, eval_policy,
+                        initial_expertdata=None, relabel_with_expert=False,
+                        start_relabel_with_expert=1, expert_policy=None):
+        """
+        :param n_iter:  number of (dagger) iterations
+        :param collect_policy:
+        :param eval_policy:
+        :param initial_expertdata:
+        :param relabel_with_expert:  whether to perform dagger
+        :param start_relabel_with_expert: iteration at which to start relabel with expert
+        :param expert_policy:
+        """
+        # for itr in range(1):
+        print("\n\n********** Evaluation Expert ************")
+        
+        eval_paths, eval_envsteps_this_batch = utils.sample_trajectories(
+            self.env, expert_policy, 
+            self.params['alg']['eval_batch_size'], 
+            self.params['env']['max_episode_length'])
+        
+        # returns, for logging
+        eval_returns = [eval_path["reward"].sum() for eval_path in eval_paths]
+
+        # episode lengths, for logging
+        eval_ep_lens = [len(eval_path["reward"]) for eval_path in eval_paths]
+
+        # decide what to log
+        logs = OrderedDict()
+        logs["Eval_AverageReturn"] = np.mean(eval_returns)
+        logs["Eval_StdReturn"] = np.std(eval_returns)
+        logs["Eval_MaxReturn"] = np.max(eval_returns)
+        logs["Eval_MinReturn"] = np.min(eval_returns)
+        logs["Eval_AverageEpLen"] = np.mean(eval_ep_lens)
+        
+        for key, value in logs.items():
+            print('{} : {}'.format(key, value))
 
     ####################################
     ####################################
@@ -154,25 +193,36 @@ class RL_Trainer(object):
             train_video_paths: paths which also contain videos for visualization purposes
         """
 
-        # TODO decide whether to load training data or use the current policy to collect more data
+        # DONE: decide whether to load training data or use the current policy to collect more data
         # HINT: depending on if it's the first iteration or not, decide whether to either
                 # (1) load the data. In this case you can directly return as follows
                 # ``` return loaded_paths, 0, None ```
 
                 # (2) collect `self.params['batch_size']` transitions
+        if itr == 0:
+            with open('../../../' + load_initial_expertdata, 'rb') as file:# might need to change if want to run on windows
+                paths = pickle.load(file) 
+            return paths, 0, None
 
-        # TODO collect `batch_size` samples to be used for training
+        # DONE: collect `batch_size` samples to be used for training
         # HINT1: use sample_trajectories from utils
         # HINT2: you want each of these collected rollouts to be of length self.params['ep_len']
         print("\nCollecting data to be used for training...")
-        paths, envsteps_this_batch = TODO
+        paths, envsteps_this_batch = utils.sample_trajectories(
+            self.env,
+            collect_policy,
+            batch_size,
+            self.params['env']['max_episode_length'],
+            self.params['env']['render'],
+            ('rgb_array')
+        )
 
         # collect more rollouts with the same policy, to be saved as videos in tensorboard
         # note: here, we collect MAX_NVIDEO rollouts, each of length MAX_VIDEO_LEN
         train_video_paths = None
         if self.log_video:
             print('\nCollecting train rollouts to be used for saving videos...')
-            ## TODO look in utils and implement sample_n_trajectories
+            ## DONE: look in utils and implement sample_n_trajectories
             train_video_paths = utils.sample_n_trajectories(self.env, collect_policy, MAX_NVIDEO, MAX_VIDEO_LEN, True)
 
         return paths, envsteps_this_batch, train_video_paths
@@ -181,27 +231,28 @@ class RL_Trainer(object):
     def train_agent(self):
         print('\nTraining agent using sampled data from replay buffer...')
         all_logs = []
-        for train_step in range(self.params['num_agent_train_steps_per_iter']):
+        for train_step in range(self.params['alg']['num_agent_train_steps_per_iter']): #this was corrected
 
-            # TODO sample some data from the data buffer
+            # DONE: sample some data from the data buffer
             # HINT1: use the agent's sample function
             # HINT2: how much data = self.params['train_batch_size']
-            ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch = TODO
+            ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch = self.agent.sample(self.params['alg']['train_batch_size'])
 
-            # TODO use the sampled data to train an agent
+            # DONE: use the sampled data to train an agent
             # HINT: use the agent's train function
             # HINT: keep the agent's training log for debugging
-            train_log = TODO
+            train_log = self.agent.train(ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch)
             all_logs.append(train_log)
         return all_logs
 
     def do_relabel_with_expert(self, expert_policy, paths):
         print("\nRelabelling collected observations with labels from an expert policy...")
 
-        # TODO relabel collected obsevations (from our policy) with labels from an expert policy
+        # DONE relabel collected obsevations (from our policy) with labels from an expert policy
         # HINT: query the policy (using the get_action function) with paths[i]["observation"]
         # and replace paths[i]["action"] with these expert labels
-
+        for i in range(len(paths)):
+            paths[i]["action"] = expert_policy.get_action(paths[i]["observation"])
         return paths
 
     ####################################
@@ -211,7 +262,10 @@ class RL_Trainer(object):
 
         # collect eval trajectories, for logging
         print("\nCollecting data for eval...")
-        eval_paths, eval_envsteps_this_batch = utils.sample_trajectories(self.env, eval_policy, self.params['eval_batch_size'], self.params['ep_len'])
+        eval_paths, eval_envsteps_this_batch = utils.sample_trajectories(
+            self.env, eval_policy, 
+            self.params['alg']['eval_batch_size'], 
+            self.params['env']['max_episode_length'])
 
         # save eval rollouts as videos in tensorboard event file
         if self.log_video and train_video_paths != None:
