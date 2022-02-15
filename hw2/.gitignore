@@ -1,4 +1,5 @@
 /outputs/
+/outputs_final/
 
 ift6163/__pycache__/
 ift6163/agents/__pycache__/
