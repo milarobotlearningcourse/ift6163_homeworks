@@ -1,1 +1,13 @@
 /outputs/
+
+ift6163/__pycache__/
+ift6163/agents/__pycache__/
+ift6163/envs/__pycache__/
+ift6163/envs/cheetah/__pycache__/
+ift6163/envs/obstacles/__pycache__/
+ift6163/envs/reacher/__pycache__/
+ift6163/infrastructure/__pycache__/
+ift6163/models/__pycache__/
+ift6163/policies/__pycache__/
+
+.idea/
