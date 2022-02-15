@@ -2,18 +2,18 @@ import os
 import time
 
 import sys
-print(sys.path)
 
+print(sys.path)
 
 from ift6163.agents.mb_agent import MBAgent
 from ift6163.infrastructure.rl_trainer import RL_Trainer
 import hydra, json
 from omegaconf import DictConfig, OmegaConf
 
+
 class MB_Trainer(object):
 
     def __init__(self, params):
-
         #####################
         ## SET AGENT PARAMS
         #####################
@@ -23,12 +23,12 @@ class MB_Trainer(object):
             'n_layers': params['n_layers'],
             'size': params['size'],
             'learning_rate': params['learning_rate'],
-            }
+        }
 
         train_args = {
             'num_agent_train_steps_per_iter': params['num_agent_train_steps_per_iter'],
             'discrete': False,
-            'ob_dim':  0,
+            'ob_dim': 0,
             'ac_dim': 0,
         }
 
@@ -43,24 +43,23 @@ class MB_Trainer(object):
 
         agent_params = {**computation_graph_args, **train_args, **controller_args}
 
-        tmp = OmegaConf.create({'agent_params' : agent_params })
+        tmp = OmegaConf.create({'agent_params': agent_params})
 
-        self.params = OmegaConf.merge(tmp , params)
+        self.params = OmegaConf.merge(tmp, params)
         print(self.params)
 
         ################
         ## RL TRAINER
         ################
 
-        self.rl_trainer = RL_Trainer(self.params , agent_class =  MBAgent)
+        self.rl_trainer = RL_Trainer(self.params, agent_class=MBAgent)
 
     def run_training_loop(self):
-
         self.rl_trainer.run_training_loop(
             self.params['n_iter'],
-            collect_policy = self.rl_trainer.agent.actor,
-            eval_policy = self.rl_trainer.agent.actor,
-            )
+            collect_policy=self.rl_trainer.agent.actor,
+            eval_policy=self.rl_trainer.agent.actor,
+        )
 
 
 @hydra.main(config_path="conf", config_name="config")
@@ -68,24 +67,23 @@ def my_main(cfg: DictConfig):
     my_app(cfg)
 
 
-def my_app(cfg: DictConfig): 
+def my_app(cfg: DictConfig):
     print(OmegaConf.to_yaml(cfg))
     import os
     print("Command Dir:", os.getcwd())
     # print ("params: ", json.dumps(params, indent=4))
-    if cfg['env_name']=='reacher-ift6163-v0':
-        cfg['ep_len']=200
-    if cfg['env_name']=='cheetah-ift6163-v0':
-        cfg['ep_len']=500
-    if cfg['env_name']=='obstacles-ift6163-v0':
-        cfg['ep_len']=100
+    if cfg['env_name'] == 'reacher-ift6163-v0':
+        cfg['ep_len'] = 200
+    if cfg['env_name'] == 'cheetah-ift6163-v0':
+        cfg['ep_len'] = 500
+    if cfg['env_name'] == 'obstacles-ift6163-v0':
+        cfg['ep_len'] = 100
     params = vars(cfg)
-    print ("params: ", params)
+    print("params: ", params)
 
     ##################################
     ### CREATE DIRECTORY FOR LOGGING
     ##################################
-
 
     logdir_prefix = 'hw2_'  # keep for autograder
 
@@ -97,7 +95,7 @@ def my_app(cfg: DictConfig):
     logdir = logdir_prefix + cfg.exp_name + '_' + cfg.env_name + '_' + time.strftime("%d-%m-%Y_%H-%M-%S")
     logdir = os.path.join(data_path, logdir)
     params['logdir'] = logdir
-    if not(os.path.exists(logdir)):
+    if not (os.path.exists(logdir)):
         os.makedirs(logdir)
     from omegaconf import open_dict
     with open_dict(cfg):
@@ -113,8 +111,8 @@ def my_app(cfg: DictConfig):
     trainer.run_training_loop()
 
 
-
 if __name__ == "__main__":
     import os
+
     print("Command Dir:", os.getcwd())
     my_main()

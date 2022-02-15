@@ -23,7 +23,7 @@ seed: 1
 no_gpu: False
 which_gpu: 0
 video_log_freq: -1
-scalar_log_freq: -1
+scalar_log_freq: 1
 save_params: True
 
 
