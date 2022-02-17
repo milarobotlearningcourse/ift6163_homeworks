@@ -12,3 +12,5 @@ ift6163/models/__pycache__/
 ift6163/policies/__pycache__/
 
 .idea/
+
+data/

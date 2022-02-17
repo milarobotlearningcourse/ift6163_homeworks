@@ -48,20 +48,41 @@ class MPCPolicy(BasePolicy):
                 + f"num_elites={self.cem_num_elites}, iterations={self.cem_iterations}")
 
     def sample_action_sequences(self, num_sequences, horizon, obs=None):
+        def sample_random_action_sequences():
+            return np.random.uniform(low=self.low, high=self.high, size=(num_sequences, horizon, self.ac_dim))
+
         if self.sample_strategy == 'random' or (self.sample_strategy == 'cem' and obs is None):
             # DONE(Q1) uniformly sample trajectories and return an array of
             # dimensions (num_sequences, horizon, self.ac_dim) in the range
             # [self.low, self.high]
-            random_action_sequences = np.random.uniform(low=self.low,
-                                                        high=self.high,
-                                                        size=(num_sequences, horizon, self.ac_dim))
-            return random_action_sequences
+            return sample_random_action_sequences()
+
         elif self.sample_strategy == 'cem':
-            # TODO(Q5): Implement action selection using CEM.
+            # DONE(Q5): Implement action selection using CEM.
             # Begin with randomly selected actions, then refine the sampling distribution
             # iteratively as described in Section 3.3, "Iterative Random-Shooting with Refinement" of
             # https://arxiv.org/pdf/1909.11652.pdf
+            means = np.zeros((horizon, self.ac_dim))
+            covs = np.zeros((horizon, self.ac_dim, self.ac_dim))
             for i in range(self.cem_iterations):
+                if i == 0:
+                    action_sequences = sample_random_action_sequences()
+                else:
+                    for t in range(horizon):
+                        action_sequences[:,t,:] = np.random.multivariate_normal(means[t], covs[t], num_sequences)
+                # print(action_sequences.shape)
+                elite_action_sequences = action_sequences[np.argsort(self.evaluate_candidate_sequences(action_sequences, obs))[-self.cem_num_elites:]]
+
+                # print(elite_action_sequences.shape)
+
+                # update means
+                elite_means = np.mean(elite_action_sequences, axis=0)
+                means = self.cem_alpha * elite_means + (1 - self.cem_alpha) * means
+                # update covs
+                centered_elites = elite_action_sequences - elite_means[None, :]
+                elite_covs = np.einsum('nhi,nhj->hij', centered_elites, centered_elites) / self.cem_num_elites
+                covs = self.cem_alpha * elite_covs + (1 - self.cem_alpha) * covs
+
                 # - Sample candidate sequences from a Gaussian with the current
                 #   elite mean and variance
                 #     (Hint: remember that for the first iteration, we instead sample
@@ -70,11 +91,11 @@ class MPCPolicy(BasePolicy):
                 #     (Hint: what existing function can we use to compute rewards for
                 #      our candidate sequences in order to rank them?)
                 # - Update the elite mean and variance
-                pass
+                # pass
 
-            # TODO(Q5): Set `cem_action` to the appropriate action sequence chosen by CEM.
+            # DONE(Q5): Set `cem_action` to the appropriate action sequence chosen by CEM.
             # The shape should be (horizon, self.ac_dim)
-            cem_action = None
+            cem_action = means
 
             return cem_action[None]
         else:
