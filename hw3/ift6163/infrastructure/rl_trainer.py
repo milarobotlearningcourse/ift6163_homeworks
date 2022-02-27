@@ -52,7 +52,8 @@ class RL_Trainer(object):
 
         # Make the gym environment
         self.env = gym.make(self.params['env_name'])
-        print (self.env)
+        print (self.env) 
+        sys.exit()
         if 'env_wrappers' in self.params:
             # These operations are currently only for Atari envs
             self.env = wrappers.Monitor(self.env, os.path.join(self.params['logdir'], "gym"), force=True)
@@ -100,12 +101,12 @@ class RL_Trainer(object):
         else:
             self.fps = 10
 
+
         #############
         ## AGENT
         #############
 
         self.agent = agent_class(self.env, self.params['agent_params'])
-
 
     def run_training_loop(self, n_iter, collect_policy, eval_policy,
                           initial_expertdata=None):
@@ -128,9 +129,9 @@ class RL_Trainer(object):
 
             # decide if videos should be rendered/logged at this iteration
             if itr % self.params['video_log_freq'] == 0 and self.params['video_log_freq'] != -1:
-                self.log_video = True
+                self.logvideo = True
             else:
-                self.log_video = False
+                self.logvideo = False
 
             # decide if metrics should be logged
             if self.params['scalar_log_freq'] == -1:
@@ -166,7 +167,7 @@ class RL_Trainer(object):
                 self.log_model_predictions(itr, all_logs)
 
             # log/save
-            if self.log_video or self.logmetrics:
+            if self.logvideo or self.logmetrics:
                 # perform logging
                 print('\nBeginning logging procedure...')
                 self.perform_logging(itr, paths, eval_policy, train_video_paths, all_logs)
@@ -188,42 +189,13 @@ class RL_Trainer(object):
             envsteps_this_batch: the sum over the numbers of environment steps in paths
             train_video_paths: paths which also contain videos for visualization purposes
         """
-        # DONE: get this from previous assignment
-        if itr == 0:
-            if initial_expertdata is not None:
-                with open('../../../' + initial_expertdata, 'rb') as file: # might need to change if want to run on windows
-                    paths = pickle.load(file)
-                return paths, 0, None
-
-        print("\nCollecting data to be used for training...")
-        paths, envsteps_this_batch = utils.sample_trajectories(
-            self.env,
-            collect_policy,
-            num_transitions_to_sample, #batch_size,
-            self.params['ep_len'], #self.params['env']['max_episode_length'],
-            self.params['video_log_freq'] != -1, #self.params['env']['render'],
-            # ('rgb_array')
-        )
-
-        train_video_paths = None
-        if self.log_video:
-            print('\nCollecting train rollouts to be used for saving videos...')
-            train_video_paths = utils.sample_n_trajectories(self.env, collect_policy, MAX_NVIDEO, MAX_VIDEO_LEN, True)
+        # TODO: get this from previous assignment
 
         return paths, envsteps_this_batch, train_video_paths
 
     def train_agent(self):
-        # DONE: get this from previous assignment
-        print('\nTraining agent using sampled data from replay buffer...')
-        all_logs = []
-        for train_step in range(self.params['num_agent_train_steps_per_iter']):
-            # sample some data from the data buffer
-            ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch = self.agent.sample(self.params['train_batch_size'])
-
-            # use the sampled data to train an agent
-            train_log = self.agent.train(ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch)
-            all_logs.append(train_log)
-        return all_logs
+        print('TODO')
+    # TODO: get this from previous assignment
 
     ####################################
     ####################################
@@ -238,7 +210,7 @@ class RL_Trainer(object):
         eval_paths, eval_envsteps_this_batch = utils.sample_trajectories(self.env, eval_policy, self.params['eval_batch_size'], self.params['ep_len'])
 
         # save eval rollouts as videos in tensorboard event file
-        if self.log_video and train_video_paths != None:
+        if self.logvideo and train_video_paths != None:
             print('\nCollecting video rollouts eval')
             eval_video_paths = utils.sample_n_trajectories(self.env, eval_policy, MAX_NVIDEO, MAX_VIDEO_LEN, True)
 
